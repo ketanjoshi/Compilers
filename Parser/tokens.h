@@ -1,0 +1,10 @@
+#define ERROR 0
+#define O_BRACE 1
+#define C_BRACE 2
+#define LOOP 3
+#define PRINT 4
+#define ASSIGN_OP 5
+#define BIN_OP 6
+#define NUM 7
+#define ID 8
+#define DOLLAR 9

@@ -1,0 +1,17 @@
+		Ketan Joshi (kkj140030)
+CS 6353.001 	: Compiler Construction
+Project 2 		: Parser and parse tree generation
+-----------------------------------------------------
+
+Zip contains the make file called "parser.make" with modes "clean", "build", "exec" and "all".
+
+COMMAND LINE INPUTS:
+If you need to pass the .pt file or .sfp file (needed only for "all" or "exec" mode)from commandline you can do so using:
+make parser.make <mode> SFP_FILE=<your_sfp_name> PT_FILE=<your_pt_name>
+
+
+MAKE FILE MODES:
+1. clean 	- cleans the generated lex and exe files
+2. build 	- builds the lex.yy.c and parser executables
+3. exec 	- executed the program using .pt and .sfp files (by default it runs on input.pt and sample.sfp)
+4. all 		- runs all the above modes sequentially 
