@@ -1,0 +1,17 @@
+
+# Temp intermediate files
+
+*.exe
+*.out
+*.txt
+*.o
+*.zip
+*.jpg
+*.pdf
+lex.yy.c
+
+
+
+# Project1
+
+Project1/
