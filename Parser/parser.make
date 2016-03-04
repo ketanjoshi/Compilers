@@ -1,4 +1,4 @@
-CC=gcc
+CC=cc
 LEX=lex
 FILES_TO_REMOVE=lex.yy.c *.exe *.txt *.out
 PT_FILE=input1.pt

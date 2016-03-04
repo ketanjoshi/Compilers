@@ -164,9 +164,9 @@ void printParseTree() {
 * Processes the input token using parse tables.
 */
 void processToken(int token) {
-	int shiftPerformed = 1;
+	int isTokenConsumed = 1;
 
-	while(shiftPerformed) {
+	while(isTokenConsumed) {
 		char *action = actionTab[currState][token];
 		int isShift = isShiftAction(action);
 
@@ -187,7 +187,7 @@ void processToken(int token) {
 			TreeNode* newNode = buildNode(T[token], yytext, newState);
 			shift(newNode);
 			currState = newState;
-			shiftPerformed = 0;
+			isTokenConsumed = 0;
 		}
 		else {
 			// Reduce action
