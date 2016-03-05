@@ -23,7 +23,6 @@ int top				= 0;
 
 // Parse tree head;
 TreeNode* head;
-int siblingArr[100];
 
 // Current parser state
 int currState;
@@ -123,22 +122,18 @@ void shift(TreeNode* node) {
 * Recursively prints the tree starting from input node. Spaces and index are 
 * used internally to correctly show child and siblings of particular node.
 */
-void printTree(TreeNode* node, int spaces, int index) {
+void printTree(TreeNode* node, int spaces) {
 	if(node == NULL) return;
 
 	int i;
 	for(i = 0; i < spaces; i++) {
-		if(siblingArr[i])
-			fprintf(treeWriter, "|-\t");
-		else 
-			fprintf(treeWriter, "\t");
+		fprintf(treeWriter, "  ");
 	}
 
 	fprintf(treeWriter, "(%s,%c)\n", node->value, node->symbol);
 
-	siblingArr[index] = node->sib == NULL ? 0 : 1;
-	printTree(node->child, spaces + 1, index + 1);
-	printTree(node->sib, spaces, index);
+	printTree(node->child, spaces + 2);
+	printTree(node->sib, spaces);
 }
 
 /*
@@ -157,7 +152,7 @@ void printBranch(TreeNode* node) {
 
 void printParseTree() {
 	// Initial call
-	printTree(head, 0, 0);
+	printTree(head, 0);
 }
 
 /*

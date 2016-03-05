@@ -7,14 +7,14 @@ Project 2 		: Parser and parse tree generation
 
 FILE CONTENTS:
 
-parser.make:
-------------
+makefile:
+---------
 
 Modes:
 		clean 	- cleans the generated lex and exe files
 		build 	- builds the lex.yy.c and parser executables
 		exec 	- executed the program using .pt and .sfp files (by default it runs on input1.pt and sample.sfp)
-		all 		- runs all the above modes sequentially
+		all 	- runs all the above modes sequentially
 
 Execution: make -f parser.make all
 
@@ -24,7 +24,7 @@ Output:
 
 Optional command line inputs:
 If you need to pass the .pt file or .sfp file from commandline you can do so using:
-"make -f parser.make <mode> SFP_FILE=<your_sfp_name> PT_FILE=<your_pt_name>"
+"make -f makefile <mode> SFP_FILE=<your_sfp_name> PT_FILE=<your_pt_name>"
 
 
 SFP.l:
