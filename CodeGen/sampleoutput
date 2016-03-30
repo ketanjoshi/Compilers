@@ -1,0 +1,22 @@
+load R3 M[1]
+< R2 R3 0
+if R3  21
+store M[6]  1
+load R3 M[1]
+> R2 R3 M[2]
+if R3  9
+goto  20
+load R2 M[2]
+mul R1 R2 M[1]
+store M[0] R1
+load R2 M[0]
+store M[6] R2
+load R2 M[1]
+sub R1 R2  1
+store M[0] R1
+load R2 M[0]
+store M[5] R2
+goto  5
+goto  22
+store M[6] -1
+read M[5] M[7]
