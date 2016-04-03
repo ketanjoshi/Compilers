@@ -71,7 +71,7 @@ int currDatatype; // 1 => string, 2 => float
 %token <str> INTEGER FLOAT
 %token <str> O_BRACE C_BRACE ASSIGN_OP BOOL COMPARE_OP
 
-%type <str> constDef constName S_Param assgnStmt param P_Param
+%type <str> constDef constName S_Param assgnStmt param P_Param param1
 %type <str> readStmt id ifStmt exp program printStmt stmts stmt
 %type <str> loopStmt whileStmt args arg retArg funcName funcDef funcDefs
 
@@ -82,10 +82,15 @@ int currDatatype; // 1 => string, 2 => float
 
 program		: 
 		CONSTANTS constDefs
-		FUNCTIONS funcDefs
-		MAIN stmts 	{ 
+		FUNCTIONS funcDefs 	/*{ 
+			//printCorrectedInstr($4);
+			//fprintf(stderr, "%s", $4);
+		}*/
+		MAIN stmts 	{
+			printCorrectedInstr($4);
+			fprintf(stderr, "%s", $4);
 			printCorrectedInstr($6);
-			fprintf(stderr, "%s", $6);
+			fprintf(stderr, "%s\n", $6);
 		}
 		;
 
@@ -98,6 +103,7 @@ constDef 	:
 			// Save the symbol value and type
 			int index = findSymbolIndex($2);
 			if(index == -1) {
+				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $2);
 				// ERROR
 			}
 			symbolTable[index].datatype = currDatatype;
@@ -135,6 +141,7 @@ assgnStmt 	:
 		O_BRACE ASSIGN_OP IDENTIFIER param C_BRACE 	{
 			int index = findSymbolIndex($3);
 			if(index == -1) {
+				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $3);
 				// ERROR
 			}
 			else {
@@ -149,14 +156,15 @@ assgnStmt 	:
 				//strcpy(symbolTable[index].value, $4);
 			}
 			// We have to change the contents of M[storedMemAddr] for this symbol
-			if($4[0] == 'M') {
+			//if($4[0] == 'M') {
+			if(isMemLoc($4)) {
 				int r = getAvailableRegister();
 				char loadInstr[20];
 				sprintf(loadInstr, "load R%d %s\n", r, $4);
 				sprintf($$, "%sstore M[%d] R%d\n", loadInstr, symbolTable[index].storedMemAddr, r);
 				clearRegister(r);
 			}
-			else if(isNumber($4) == 1) {
+			else if(isNumber($4)) {
 				sprintf($$, "store M[%d] %s\n", symbolTable[index].storedMemAddr, $4);
 			}
 			else if($4[0] == 'l') {
@@ -166,18 +174,67 @@ assgnStmt 	:
 				clearRegister(r);
 			}
 			else {
-
+				sprintf($$, "prob: %s : %s : %s\n", $2, $3, $4);
 			}
+			//fprintf(stderr, "Assign:\n%s", $$);
 		}
 		;
 
 param 		:
-		/*O_BRACE funcName param1 C_BRACE		{
+		O_BRACE funcName param1 C_BRACE		{
 			// Do the parameter mapping
 			// call the function
 			// Store the result in R1
+			int index = findSymbolIndex($2);
+			// for each value in params - copy actual params
+			char par[6];
+			int i = 0;
+			int ind = 0;
+			int paramIndex = 0;
+			char actualParams[5][8], formalParams[5][8];
+			while(symbolTable[index].params[i] == ' ') i++;
+			while(symbolTable[index].params[i] != '\0') {
+				if(symbolTable[index].params[i] == ' ') {
+					// copy actual param to this param
+					par[ind] = '\0';
+					strcpy(formalParams[paramIndex++], par);
+					ind = 0; i++;
+				}
+				else
+					par[ind++] = symbolTable[index].params[i++];
+			}
+			i = 0; ind = 0; paramIndex = 0;
+			while($3[i] == ' ') i++;
+			while($3[i] != '\0') {
+				if($3[i] == ' ') {
+					// copy actual param to this param
+					par[ind] = '\0';
+					strcpy(actualParams[paramIndex++], par);
+					ind = 0; i++;
+				}
+				else
+					par[ind++] = $3[i++];
+			}
+			int r = getAvailableRegister();
+			char loadInstr[20];
+			char storeInstr[20];
+			strcpy($$, "");
+			for(i = 0; i < paramIndex; i++) {
+				// write copy instructions
+				sprintf(loadInstr, "load R%d %s\n", r, actualParams[i]);
+				sprintf(storeInstr, "store %s R%d\n", formalParams[i], r);
+				strcat($$, loadInstr);
+				strcat($$, storeInstr);
+			}
+			strcat($$, "load R0 2\n");
+			char goto1Instr[20];
+			sprintf(goto1Instr, "|goto %d\n", symbolTable[index].entryPoint);
+			char storeRetInstr[20];
+			strcat($$, goto1Instr);
+			//fprintf(stderr, "Function: \n%s", $$);
+			clearRegister(r);
 
-		}	|*/
+		}	|
 		O_BRACE PRED_FUNC param param C_BRACE 	{
 			int v1 = getAvailableRegister();
 			char loadInstr[20];
@@ -214,17 +271,22 @@ param 		:
 		IDENTIFIER 	{
 			int index = findSymbolIndex($1);
 			if(index == -1) {
+				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $1);
 				// ERROR
 			}
-			sprintf($$, "M[%d]", index);
+			sprintf($$, "M[%d]", symbolTable[index].storedMemAddr);
 		}
 		;
 
 
-/*param1 		:
-		param param1 	| 
+param1 		:
+		param param1 	{
+			sprintf($$, "%s %s", $1, $2);
+		}	| 	{
+			sprintf($$, "%c", '\0');
+		}
 		;
-*/
+
 
 printStmt 	:
 		O_BRACE PRINT P_Param C_BRACE 	{
@@ -237,6 +299,7 @@ P_Param 	:
 		IDENTIFIER 		{
 			int index = findSymbolIndex($1);
 			if(index == -1) {
+				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $1);
 				// ERROR
 			}
 			if(symbolTable[index].isConstant)
@@ -252,13 +315,14 @@ P_Param 	:
 		IDENTIFIER P_Param 	{
 			int index = findSymbolIndex($1);
 			if(index == -1) {
+				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $1);
 				// ERROR
 			}
 			if(symbolTable[index].isConstant) {
 				sprintf($$, "%s %s ", symbolTable[index].value, $2);
 			}
 			else {
-				sprintf($$, "M[%d] %s", index, $2);
+				sprintf($$, "M[%d] %s", symbolTable[index].storedMemAddr, $2);
 			}
 		}	|
 
@@ -279,6 +343,7 @@ id 		:
 		id IDENTIFIER {
 			int index = findSymbolIndex($2);
 			if(index == -1) {
+				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $2);
 				// ERROR
 			}
 			sprintf($$, "%s M[%d]", $1, symbolTable[index].storedMemAddr);
@@ -286,6 +351,7 @@ id 		:
 		IDENTIFIER 	{
 			int index = findSymbolIndex($1);
 			if(index == -1) {
+				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $1);
 				// ERROR
 			}
 			sprintf($$, "M[%d]", symbolTable[index].storedMemAddr);
@@ -315,18 +381,20 @@ exp 		:
 
 			int index = findSymbolIndex($3);
 			if(index == -1) {
+				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $3);
 				// ERROR
 			}
-			if($3[0] == 'M') {
+			//if($3[0] == 'M') {
+			if(isMemLoc($3)) {
 				char loadInstr[20];
 				sprintf(loadInstr, "load R%d %s\n", r2, $3);
 				sprintf($$, "%s%s R%d R%d %s\n", loadInstr, $2, r1, r2, $4);
 			}
-			else if(isNumber($3) == 1) {
+			else if(isNumber($3)) {
 				sprintf($$, "%s R%d %s %s\n", $2, r1, $3, $4);
 			}
 			else {
-
+				sprintf($$, "prob: %s : %s : %s\n", $2, $3, $4);
 			}
 			clearRegister(r1);
 			clearRegister(r2);
@@ -364,6 +432,7 @@ loopStmt 	:
 			int stmtsLines = getLineCount($4);
 			int index = findSymbolIndex($3);
 			if(index == -1) {
+				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $3);
 				// ERROR
 			}
 
@@ -406,14 +475,18 @@ funcDef 	:
 			// 2. store next instr num in register
 			int index = findSymbolIndex($2);
 			if(index == -1) {
+				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $2);
 				// ERROR
 			}
 			strcpy(symbolTable[index].params, $3);
 			strcpy(symbolTable[index].retArgName, $5);
+			symbolTable[index].entryPoint = codeOffset;
 
-			sprintf($$, "%s\nload R0 M[%d]\ngoto R0\n", $6, symbolTable[index].retAddrMemIndx);			
+			//sprintf($$, "%sload R0 M[%d]\ngoto R0\n", $6, symbolTable[index].retAddrMemIndx);
+			//codeOffset += 2;
+			sprintf($$, "%sgoto R0\n", $6);
+			codeOffset++;
 			codeOffset += getLineCount($6);
-			codeOffset += 2;
 		}
 		;
 
@@ -426,10 +499,11 @@ arg 		:
 		IDENTIFIER 	{
 			int index = findSymbolIndex($1);
 			if(index == -1) {
+				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $1);
 				// ERROR
 			}
 
-			sprintf($$, "M[%d] ", index);
+			sprintf($$, "M[%d] ", symbolTable[index].storedMemAddr);
 		}
 		;
 
@@ -437,10 +511,11 @@ retArg 		:
 		IDENTIFIER 	{ 
 			int index = findSymbolIndex($1);
 			if(index == -1) {
+				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $1);
 				// ERROR
 			}
 
-			sprintf($$, "M[%d] ", index);
+			sprintf($$, "M[%d] ", symbolTable[index].storedMemAddr);
 		}
 		;
 
@@ -449,10 +524,11 @@ funcName	:
 			strcpy($$, $1);
 			int index = findSymbolIndex($1);
 			if(index == -1) {
+				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $1);
 				// ERROR
 			}
 			symbolTable[index].isFunction = 1;
-			symbolTable[index].entryPoint = codeOffset;
+			//symbolTable[index].entryPoint = codeOffset;
 			symbolTable[index].retValMemIndx = getNextFreeMemLoc();
 			symbolTable[index].retAddrMemIndx = getNextFreeMemLoc();
 		}
@@ -465,10 +541,6 @@ funcName	:
 
 */
 
-/*
-
-
-*/
 
 %%
 int getNextFreeMemLoc() {
@@ -535,20 +607,35 @@ void printLine(char str[], int lastIndex, int lineCount) {
 		str[6] = '\0';
 		fprintf(fpo, "%s %d\n", str, correctLineNo);
 	}
-	else if(str[0] == 'g' && str[1] == 'o') {
+	else if(str[0] == 'g' && str[1] == 'o'
+			&& str[5] != 'R') {
 		// GOTO statement
 		actualLineNo = extractLineNo(str, 5, lastIndex);
 		correctLineNo = lineCount + actualLineNo;
 		str[5] = '\0';
 		fprintf(fpo, "%s %d\n", str, correctLineNo);
 	}
-	else
+	else if(strcmp(str, "load R0 2") == 0) {
+		str[8] = '\0';
+		fprintf(fpo, "%s %d\n", str, lineCount + 2);
+	}
+	else if(str[0] == '|') {
+		int i = 0;
+		while(i < strlen(str) - 1) {
+			str[i] = str[i + 1];
+			i++;
+		}
+		str[i] = '\0';
 		fprintf(fpo, "%s\n", str);
+	}
+	else {
+		fprintf(fpo, "%s\n", str);
+	}
 }
 
 void printCorrectedInstr(char str[]) {
 	int i = 0;
-	int lineno = 0;
+	int lineno = codeOffset;
 	char buff[30];
 	int buffIndex = 0;
 	while(str[i] != '\0') {
@@ -567,11 +654,17 @@ void printCorrectedInstr(char str[]) {
 
 int isNumber(char str[]) {
 	int i = 0;
-	while(str[i++] != ' ');
+	while(str[i] == ' ') i++;
 	if(str[i] != '0') {
 		return atoi(str) == 0 ? 0 : 1;
 	}
 	return 1;
+}
+
+int isMemLoc(char str[]) {
+	int i = 0;
+	while(str[i] == ' ') i++;
+	return str[i] == 'M' ? 1 : 0;
 }
 
 main(int argc, char* argv[])

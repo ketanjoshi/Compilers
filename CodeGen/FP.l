@@ -129,15 +129,16 @@ void showSymbolTable()
 	FILE *fp1=fopen("symboltable.out","w");
 	fprintf(fp1,"\n\n\n SYMBOL TABLE: length = %d\n", symbolCount);
 	fprintf(fp1,"\n_______________________________________________________________");
-	fprintf(fp1,"\nIndex\tSymbol\t\tData Type\t\tValue\t\tUsage Type");
+	fprintf(fp1,"\nIndex\tSymbol\t\tData Type\t\tEntry\t\tParams");
 	fprintf(fp1,"\n_______________________________________________________________");
 	for(i = 0; i < symbolCount; i++) {	
 		j=0;	
-		fprintf(fp1,"\n%d)\t%s - M[%d]\t\t%d\t\t%s", i,
+		fprintf(fp1,"\n%d)\t%s - M[%d]\t\t%d\t\t%d\t\t%s", i,
 				symbolTable[i].symbol,
 				symbolTable[i].storedMemAddr,
 				symbolTable[i].datatype,
-				symbolTable[i].value);
+				symbolTable[i].entryPoint,
+				symbolTable[i].params);
 	}
 	fprintf(fp1,"\n_______________________________________________________________\n\n");
 }
