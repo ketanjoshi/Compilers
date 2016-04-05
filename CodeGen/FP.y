@@ -12,8 +12,7 @@ char* type_float = "float";
 char* type_bool = "bool";
 
 
-extern struct table
-{
+extern struct table {
 	int isFunction;
 	int isConstant;
 	char symbol[20];
@@ -41,19 +40,19 @@ extern void showSymbolTable();
 
 
 int registersOccupancy[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-void printCorrectedInstr(char str[]);
+int printCorrectedInstr(char str[], int);
 void clearRegister(int);
 void occupyRegister(int);
 int isNumber(char str[]);
 
 int funcRegNum = 9;		// reg to store function return address
-int codeOffset = 0;
+int codeOffset = 1;
 char currParams[50];
 
 extern FILE *yyin;
 extern int yylineno;
 
-FILE *fpi, *fpo;
+FILE *fpo;
 
 int currDatatype; // 1 => string, 2 => float
 
@@ -82,14 +81,12 @@ int currDatatype; // 1 => string, 2 => float
 
 program		: 
 		CONSTANTS constDefs
-		FUNCTIONS funcDefs 	/*{ 
-			//printCorrectedInstr($4);
-			//fprintf(stderr, "%s", $4);
-		}*/
+		FUNCTIONS funcDefs
 		MAIN stmts 	{
-			printCorrectedInstr($4);
+			fprintf(fpo, "goto %d;\n", codeOffset + 1);
+			int line = printCorrectedInstr($4, 1);
 			fprintf(stderr, "%s", $4);
-			printCorrectedInstr($6);
+			printCorrectedInstr($6, line);
 			fprintf(stderr, "%s\n", $6);
 		}
 		;
@@ -333,8 +330,7 @@ P_Param 	:
 
 readStmt 	:
 		O_BRACE READ id C_BRACE 	{
-			//fprintf(stderr, "read %s\n", $3);
-			sprintf($$, "read %s\n", $3);
+			strcpy($$, $3);
 		}
 		;
 
@@ -346,7 +342,7 @@ id 		:
 				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $2);
 				// ERROR
 			}
-			sprintf($$, "%s M[%d]", $1, symbolTable[index].storedMemAddr);
+			sprintf($$, "%sread M[%d]\n", $1, symbolTable[index].storedMemAddr);
 		}	|
 		IDENTIFIER 	{
 			int index = findSymbolIndex($1);
@@ -354,7 +350,7 @@ id 		:
 				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $1);
 				// ERROR
 			}
-			sprintf($$, "M[%d]", symbolTable[index].storedMemAddr);
+			sprintf($$, "read M[%d]\n", symbolTable[index].storedMemAddr);
 		}
 		;
 
@@ -480,7 +476,7 @@ funcDef 	:
 			}
 			strcpy(symbolTable[index].params, $3);
 			strcpy(symbolTable[index].retArgName, $5);
-			symbolTable[index].entryPoint = codeOffset;
+			symbolTable[index].entryPoint = codeOffset + 1;
 
 			//sprintf($$, "%sload R0 M[%d]\ngoto R0\n", $6, symbolTable[index].retAddrMemIndx);
 			//codeOffset += 2;
@@ -528,18 +524,10 @@ funcName	:
 				// ERROR
 			}
 			symbolTable[index].isFunction = 1;
-			//symbolTable[index].entryPoint = codeOffset;
 			symbolTable[index].retValMemIndx = getNextFreeMemLoc();
 			symbolTable[index].retAddrMemIndx = getNextFreeMemLoc();
 		}
 		;
-
-/*funcCall 	:
-		O_BRACE funcName param1 C_BRACE		|
-		O_BRACE COMPARE_OP param1 RETURN retArg C_BRACE
-		;
-
-*/
 
 
 %%
@@ -605,7 +593,7 @@ void printLine(char str[], int lastIndex, int lineCount) {
 		actualLineNo = extractLineNo(str, 6, lastIndex);
 		correctLineNo = lineCount + actualLineNo;
 		str[6] = '\0';
-		fprintf(fpo, "%s %d\n", str, correctLineNo);
+		fprintf(fpo, "%s %d;\n", str, correctLineNo);
 	}
 	else if(str[0] == 'g' && str[1] == 'o'
 			&& str[5] != 'R') {
@@ -613,11 +601,11 @@ void printLine(char str[], int lastIndex, int lineCount) {
 		actualLineNo = extractLineNo(str, 5, lastIndex);
 		correctLineNo = lineCount + actualLineNo;
 		str[5] = '\0';
-		fprintf(fpo, "%s %d\n", str, correctLineNo);
+		fprintf(fpo, "%s %d;\n", str, correctLineNo);
 	}
 	else if(strcmp(str, "load R0 2") == 0) {
 		str[8] = '\0';
-		fprintf(fpo, "%s %d\n", str, lineCount + 2);
+		fprintf(fpo, "%s %d;\n", str, lineCount + 2);
 	}
 	else if(str[0] == '|') {
 		int i = 0;
@@ -626,16 +614,16 @@ void printLine(char str[], int lastIndex, int lineCount) {
 			i++;
 		}
 		str[i] = '\0';
-		fprintf(fpo, "%s\n", str);
+		fprintf(fpo, "%s;\n", str);
 	}
 	else {
-		fprintf(fpo, "%s\n", str);
+		fprintf(fpo, "%s;\n", str);
 	}
 }
 
-void printCorrectedInstr(char str[]) {
+int printCorrectedInstr(char str[], int offSet) {
 	int i = 0;
-	int lineno = codeOffset;
+	int lineno = offSet;
 	char buff[30];
 	int buffIndex = 0;
 	while(str[i] != '\0') {
@@ -649,7 +637,7 @@ void printCorrectedInstr(char str[]) {
 		i++;
 		buffIndex = 0;
 	}
-
+	return lineno;
 }
 
 int isNumber(char str[]) {
@@ -667,19 +655,14 @@ int isMemLoc(char str[]) {
 	return str[i] == 'M' ? 1 : 0;
 }
 
-main(int argc, char* argv[])
-{
-	int temp=0;
-	char ch;
-	fpi=fopen("sample.fp","r");
-	fpo=fopen("code.out","w");
-	yyin=fpi;
+void main(int argc, char* argv[]) {
+	fpo = fopen(argv[1],"w");
+	yyin = stdin;
 	yyparse();
 	showSymbolTable();
 }
 
-int yyerror(char* s)
-{
+int yyerror(char* s) {
 	fprintf(stderr, "%d : YACC: %s\n", yylineno, s);
 }
 
