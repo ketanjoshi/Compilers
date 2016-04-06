@@ -141,19 +141,8 @@ assgnStmt 	:
 				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $3);
 				// ERROR
 			}
-			else {
-				// Check type if needed
-				if(symbolTable[index].datatype == 0) {
-					// Type not assigned yet
-					symbolTable[index].datatype = currDatatype;
-				}
-				else if(currDatatype == symbolTable[index].datatype) {
-					// Correct types
-				}
-				//strcpy(symbolTable[index].value, $4);
-			}
+
 			// We have to change the contents of M[storedMemAddr] for this symbol
-			//if($4[0] == 'M') {
 			if(isMemLoc($4)) {
 				int r = getAvailableRegister();
 				char loadInstr[20];
@@ -173,7 +162,6 @@ assgnStmt 	:
 			else {
 				sprintf($$, "prob: %s : %s : %s\n", $2, $3, $4);
 			}
-			//fprintf(stderr, "Assign:\n%s", $$);
 		}
 		;
 
@@ -228,7 +216,6 @@ param 		:
 			sprintf(goto1Instr, "|goto %d\n", symbolTable[index].entryPoint);
 			char storeRetInstr[20];
 			strcat($$, goto1Instr);
-			//fprintf(stderr, "Function: \n%s", $$);
 			clearRegister(r);
 
 		}	|
@@ -287,7 +274,6 @@ param1 		:
 
 printStmt 	:
 		O_BRACE PRINT P_Param C_BRACE 	{
-			//fprintf(stderr, "print %s\n", $3);
 			sprintf($$, "print %s\n", $3);
 		}
 		;
@@ -380,7 +366,6 @@ exp 		:
 				fprintf(stderr, "ERROR : couldn't find symbol : %s\n", $3);
 				// ERROR
 			}
-			//if($3[0] == 'M') {
 			if(isMemLoc($3)) {
 				char loadInstr[20];
 				sprintf(loadInstr, "load R%d %s\n", r2, $3);
@@ -478,8 +463,6 @@ funcDef 	:
 			strcpy(symbolTable[index].retArgName, $5);
 			symbolTable[index].entryPoint = codeOffset + 1;
 
-			//sprintf($$, "%sload R0 M[%d]\ngoto R0\n", $6, symbolTable[index].retAddrMemIndx);
-			//codeOffset += 2;
 			sprintf($$, "%sgoto R0\n", $6);
 			codeOffset++;
 			codeOffset += getLineCount($6);
