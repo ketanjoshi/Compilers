@@ -1,5 +1,4 @@
 CONSTANTS
-{ myconst (String const \n) }
 
 FUNCTIONS
 { factorial val return retval
@@ -11,11 +10,10 @@ FUNCTIONS
               {= val {- val 1}}
            }
     }
-    {print (Ans ) retval (\n)}
 }
 
 MAIN
-{print (Input number )}
 {read x}
 {= f {factorial x}}
-{print (Factorial of ) x ( is ) f }
+{print (Factorial of) x (is) f (\n)}
+

@@ -12,11 +12,9 @@ struct table {
 	int isConstant;
 	char symbol[20];
 	char value[20];
-	int datatype;
 	int storedMemAddr;
 
 	// Function related
-	int caller[10],callee[10];
 	int retValMemIndx;
 	int retAddrMemIndx;
 	int entryPoint;
@@ -58,7 +56,7 @@ integer		"0"|(-?[ ]?[1-9][0-9]*)
 zeros		"00"([0])*
 float		{integer}\.[0-9]+
 identifier	[a-z]+
-chars		([a-zA-Z0-9"\n"" "])+
+chars		"("([a-zA-Z0-9"\\n"" "])+")"
 space		[ \t]+
 errors		.
 
@@ -79,17 +77,13 @@ errors		.
 {while}			{ strcpy(yylval.str, yytext); return WHILE; }
 {loop}			{ strcpy(yylval.str, yytext); return LOOP; }
 {integer}		{ 
-					/*if(strlen(yytext) > 7)
-						printf("ERROR : Integer cannot be greater than 8 digits\n", INTEGER, yytext);
-					else
-						printf("%d : INTEGER : %s\n", INTEGER, yytext);*/
 					char s[5];
 					sprintf(s, "%d", atoi(yytext));
 					strcpy(yylval.str, s); return INTEGER;
 				}
 {zeros}			{ /* Neglecting leading zeros */ }
 {float}			{ strcpy(yylval.str, yytext); return FLOAT; }
-"\("{chars}"\)"			{ strcpy(yylval.str, yytext); return CHARS; }
+{chars}			{ strcpy(yylval.str, yytext); return CHARS; }
 {bool}			{ strcpy(yylval.str, yytext); return BOOL; }
 {read}			{ strcpy(yylval.str, yytext); return READ; }
 {print}			{ strcpy(yylval.str, yytext); return PRINT; }
@@ -128,19 +122,37 @@ void showSymbolTable() {
 	int i, j = 0, k = 0;
 	FILE *fp1 = fopen("symboltable.out", "w");
 	fprintf(fp1, "\n\n\n SYMBOL TABLE: length = %d\n", symbolCount);
+	fprintf(stderr, "\n\n\n SYMBOL TABLE: length = %d\n", symbolCount);
 	fprintf(fp1, "\n_______________________________________________________________");
-	fprintf(fp1, "\nIndex\tSymbol\t\tData Type\t\tEntry\t\tParams");
+	fprintf(stderr, "\n_______________________________________________________________");
+	fprintf(fp1, "\nIndex\tSymbol\t\tMemLoc/Value\tType");
+	fprintf(stderr, "\nIndex\tSymbol\t\tMemLoc/Value\tType");
 	fprintf(fp1, "\n_______________________________________________________________");
+	fprintf(stderr, "\n_______________________________________________________________");
 	for(i = 0; i < symbolCount; i++) {	
-		j = 0;	
-		fprintf(fp1, "\n%d)\t%s - M[%d]\t\t%d\t\t%d\t\t%s", i,
+		j = 0;
+		char * type = symbolTable[i].isConstant ? "Constant" : 
+				(symbolTable[i].isFunction ? "Function" : "Variable");
+		char * memLoc = (char*) malloc(6);
+		if(symbolTable[i].isConstant) {
+			strcpy(memLoc, symbolTable[i].value);
+		}
+		else {
+			sprintf(memLoc, "M[%d]", symbolTable[i].storedMemAddr);
+		}
+
+		fprintf(fp1, "\n%d.\t%s\t\t%s\t\t%s", i,
 				symbolTable[i].symbol,
-				symbolTable[i].storedMemAddr,
-				symbolTable[i].datatype,
-				symbolTable[i].entryPoint,
-				symbolTable[i].params);
+				memLoc,
+				type);
+		fprintf(stderr, "\n%d.\t%s\t\t%s\t\t%s", i,
+				symbolTable[i].symbol,
+				memLoc,
+				type);
 	}
 	fprintf(fp1, "\n_______________________________________________________________\n\n");
+	fprintf(stderr, "\n_______________________________________________________________\n\n");
+	fclose(fp1);
 }
 
 int yywrap() {
